@@ -1,7 +1,7 @@
 ### Base URL Variable
 @baseUrl = http://localhost:5000
 
-### 1. Health check
+### 1. Health check & MongoDB status
 GET {{baseUrl}}/
 
 ### 2. Get all products (Default)
@@ -16,13 +16,9 @@ GET {{baseUrl}}/products?sort=price_asc
 ### 5. Get all products with sort query parameter (Sort by price descending)
 GET {{baseUrl}}/products?sort=price_desc
 
-### 6. Get single product by valid ID
-GET {{baseUrl}}/products/1
-
-### 7. Get single product by invalid ID (Expect 404)
-GET {{baseUrl}}/products/non-existing-id
-
-### 8. Add a new product (Valid data, expect 201)
+### 6. Add a new product (Valid data, expect 201)
+# POST returns the newly created product with MongoDB 'id'
+# @name createProduct
 POST {{baseUrl}}/products
 Content-Type: application/json
 
@@ -31,6 +27,13 @@ Content-Type: application/json
   "price": 89.99,
   "quantity": 4
 }
+
+### 7. Get single product by valid ID (Use id from createProduct response or existing item)
+@createdProductId = {{createProduct.response.body.id}}
+GET {{baseUrl}}/products/{{createdProductId}}
+
+### 8. Get single product by invalid ID (Expect 404)
+GET {{baseUrl}}/products/non-existing-id
 
 ### 9. Add a new product with invalid data (Missing price, expect 400)
 POST {{baseUrl}}/products
@@ -41,17 +44,17 @@ Content-Type: application/json
 }
 
 ### 10. Update an existing product (Valid data, expect 200)
-PUT {{baseUrl}}/products/1
+PUT {{baseUrl}}/products/{{createdProductId}}
 Content-Type: application/json
 
 {
   "name": "Wireless Mechanical Keyboard Pro",
-  "price": 69.99,
-  "quantity": 12
+  "price": 99.99,
+  "quantity": 6
 }
 
 ### 11. Update a non-existing product (Expect 404)
-PUT {{baseUrl}}/products/99999
+PUT {{baseUrl}}/products/6aa389c67f22d08d2aac9999
 Content-Type: application/json
 
 {
@@ -61,10 +64,10 @@ Content-Type: application/json
 }
 
 ### 12. Delete an existing product (Expect 200)
-DELETE {{baseUrl}}/products/2
+DELETE {{baseUrl}}/products/{{createdProductId}}
 
 ### 13. Delete non-existing product (Expect 404)
-DELETE {{baseUrl}}/products/99999
+DELETE {{baseUrl}}/products/6aa389c67f22d08d2aac9999
 
 ### 14. Access undefined route (Expect 404)
 GET {{baseUrl}}/unknown-route

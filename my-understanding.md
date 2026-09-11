@@ -327,3 +327,24 @@ Route นี้ใช้สำหรับอัปเดตข้อมูล�
 4. หากพบสินค้า จะทำการตรวจสอบความถูกต้องของข้อมูล (Validation) ว่า `name` และ `price` ถูกต้องตามเกณฑ์หรือไม่ หากไม่ถูกต้องจะส่ง status `400 Bad Request`
 5. หากข้อมูลผ่าน จะประกอบ object สินค้าที่แก้ไขแล้ว โดยคง `id` เดิมไว้ แล้วนำไปแทนที่ใน array ที่ตำแหน่งเดิม: `products[productIndex] = updatedProduct;`
 6. ส่ง HTTP Status `200 OK` พร้อมแนบ JSON ของสินค้าที่อัปเดตแล้วกลับไป เพื่อให้ฝั่ง React นำข้อมูลชิ้นใหม่นี้ไป map แทนที่ใน state และ re-render หน้าจอทันที
+
+---
+
+## Bonus: Stretch Goals (MongoDB & Architecture Modularization)
+
+### 21. อธิบายการเชื่อมต่อ MongoDB และการจัดสถาปัตยกรรมโค้ดในส่วนของ Stretch Goals
+
+*คำตอบของคุณ:*
+ในส่วนของโบนัส (Stretch Goals) ได้มีการยกระดับระบบจาก In-memory array ขึ้นมาเป็น Production-ready Architecture ดังนี้:
+
+1. **MongoDB Database Persistence (Mongoose)**:
+   - ติดตั้ง `mongoose` และ `dotenv` เพื่อจัดการ Object Data Modeling (ODM)
+   - สร้าง Schema ที่ `server/models/Product.js` พร้อมทั้งทำ Built-in Schema Validation (เช่น `required`, `min: 0`, และตรวจเช็คจำนวนเต็ม)
+   - **Data Compatibility Layer**: MongoDB ปกติจะเก็บ Primary Key เป็น `_id` (ObjectId) แต่เพื่อให้ frontend React เดิมที่อ้างอิง `item.id` ทำงานต่อได้ 100% โดยไม่ต้องแก้โค้ด จึงตั้งค่า `toJSON` transform ใน Schema เพื่อแปลง `_id` เป็นสตริง `id` และตัด `__v` ออกโดยอัตโนมัติ
+   - มีการทำ Data Seeding อัตโนมัติเมื่อเปิดเซิร์ฟเวอร์ครั้งแรกแล้วยังไม่มีข้อมูลใน Collection เพื่อให้มีข้อมูลเริ่มต้นสำหรับทดสอบทันที
+
+2. **Modular Routing ด้วย `express.Router()`**:
+   - แยก Routes ทั้งหมดออกจาก `server/index.js` ไปรวมไว้ที่ `server/routes/products.js` ตามหลัก Single Responsibility Principle
+   - ใน `server/index.js` ทำหน้าที่เป็น Application Entry Point สำหรับตั้งค่า Middleware, เชื่อมต่อฐานข้อมูล MongoDB และเรียกใช้ `app.use('/products', productRoutes)`
+   - รองรับการ query ค้นหาชื่อสินค้าด้วย Regex (`$regex`, case-insensitive) และการ sort ราคาผ่าน `$sort` ของ MongoDB โดยตรงอย่างมีประสิทธิภาพ
+

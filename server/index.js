@@ -1,8 +1,14 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
+
+const productRoutes = require('./routes/products');
+const Product = require('./models/Product');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shopping-cart';
 
 // ==========================================
 // 1. Middlewares
@@ -25,43 +31,14 @@ app.use(cors());
 app.use(express.json());
 
 // ==========================================
-// 2. In-Memory Data Store
-// ==========================================
-let products = [
-  {
-    id: '1',
-    name: 'Wireless Keyboard',
-    price: 49.99,
-    quantity: 5
-  },
-  {
-    id: '2',
-    name: 'Ergonomic Mouse',
-    price: 29.99,
-    quantity: 10
-  },
-  {
-    id: '3',
-    name: 'Gaming Headset',
-    price: 79.99,
-    quantity: 3
-  },
-  {
-    id: '4',
-    name: 'USB-C Hub',
-    price: 24.50,
-    quantity: 8
-  }
-];
-
-// ==========================================
-// 3. API Routes
+// 2. API Routes
 // ==========================================
 
 // Route: Root / Health Check
 app.get('/', (req, res) => {
   res.status(200).json({
-    message: 'Shopping Cart API is running smoothly',
+    message: 'Shopping Cart API is running smoothly with MongoDB Atlas & Router integration',
+    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Connecting/Disconnected',
     endpoints: {
       getAllProducts: 'GET /products',
       getProductById: 'GET /products/:id',
@@ -72,154 +49,11 @@ app.get('/', (req, res) => {
   });
 });
 
-// Route 1: GET /products
-// Return all products, with optional query parameters:
-// - search: filter by product name (case-insensitive)
-// - sort: sort by price ('price_asc' or 'price_desc')
-app.get('/products', (req, res) => {
-  let result = [...products];
-  const { search, sort } = req.query;
-
-  // Query parameter: filter by product name
-  if (search && typeof search === 'string' && search.trim() !== '') {
-    const keyword = search.trim().toLowerCase();
-    result = result.filter(item => item.name.toLowerCase().includes(keyword));
-  }
-
-  // Query parameter: sort by price
-  if (sort === 'price_asc') {
-    result.sort((a, b) => a.price - b.price);
-  } else if (sort === 'price_desc') {
-    result.sort((a, b) => b.price - a.price);
-  }
-
-  res.status(200).json(result);
-});
-
-// Route 2: GET /products/:id
-// Return a single product by ID
-app.get('/products/:id', (req, res) => {
-  const { id } = req.params;
-  const product = products.find(item => item.id === id);
-
-  if (!product) {
-    return res.status(404).json({
-      error: `Product with ID '${id}' was not found`
-    });
-  }
-
-  res.status(200).json(product);
-});
-
-// Route 3: POST /products
-// Create a new product
-app.post('/products', (req, res) => {
-  const { name, price, quantity } = req.body;
-
-  // Validation
-  if (!name || typeof name !== 'string' || name.trim() === '') {
-    return res.status(400).json({
-      error: 'Field "name" is required and must be a non-empty string'
-    });
-  }
-
-  const numericPrice = Number(price);
-  if (price === undefined || isNaN(numericPrice) || numericPrice < 0) {
-    return res.status(400).json({
-      error: 'Field "price" is required and must be a non-negative number'
-    });
-  }
-
-  let numericQuantity = 1;
-  if (quantity !== undefined) {
-    numericQuantity = Number(quantity);
-    if (isNaN(numericQuantity) || numericQuantity < 0 || !Number.isInteger(numericQuantity)) {
-      return res.status(400).json({
-        error: 'Field "quantity" must be a non-negative integer'
-      });
-    }
-  }
-
-  const newProduct = {
-    id: String(Date.now()),
-    name: name.trim(),
-    price: numericPrice,
-    quantity: numericQuantity
-  };
-
-  products.push(newProduct);
-  res.status(201).json(newProduct);
-});
-
-// Route 4: PUT /products/:id
-// Update an existing product
-app.put('/products/:id', (req, res) => {
-  const { id } = req.params;
-  const { name, price, quantity } = req.body;
-
-  const productIndex = products.findIndex(item => item.id === id);
-  if (productIndex === -1) {
-    return res.status(404).json({
-      error: `Product with ID '${id}' was not found`
-    });
-  }
-
-  // Validation
-  if (!name || typeof name !== 'string' || name.trim() === '') {
-    return res.status(400).json({
-      error: 'Field "name" is required and must be a non-empty string'
-    });
-  }
-
-  const numericPrice = Number(price);
-  if (price === undefined || isNaN(numericPrice) || numericPrice < 0) {
-    return res.status(400).json({
-      error: 'Field "price" is required and must be a non-negative number'
-    });
-  }
-
-  let numericQuantity = products[productIndex].quantity;
-  if (quantity !== undefined) {
-    numericQuantity = Number(quantity);
-    if (isNaN(numericQuantity) || numericQuantity < 0 || !Number.isInteger(numericQuantity)) {
-      return res.status(400).json({
-        error: 'Field "quantity" must be a non-negative integer'
-      });
-    }
-  }
-
-  const updatedProduct = {
-    id,
-    name: name.trim(),
-    price: numericPrice,
-    quantity: numericQuantity
-  };
-
-  products[productIndex] = updatedProduct;
-  res.status(200).json(updatedProduct);
-});
-
-// Route 5: DELETE /products/:id
-// Delete a product by ID
-app.delete('/products/:id', (req, res) => {
-  const { id } = req.params;
-  const productIndex = products.findIndex(item => item.id === id);
-
-  if (productIndex === -1) {
-    return res.status(404).json({
-      error: `Product with ID '${id}' was not found`
-    });
-  }
-
-  const deletedProduct = products.splice(productIndex, 1)[0];
-  res.status(200).json({
-    message: `Product '${deletedProduct.name}' (ID: ${id}) has been successfully deleted`,
-    deletedProduct
-  });
-});
+// Mount modular products router
+app.use('/products', productRoutes);
 
 // ==========================================
-// 4. 404 Not Found Handler for undefined routes
+// 3. 404 Not Found Handler for undefined routes
 // ==========================================
 app.use((req, res, next) => {
   res.status(404).json({
@@ -228,7 +62,7 @@ app.use((req, res, next) => {
 });
 
 // ==========================================
-// 5. Global Error Handling Middleware
+// 4. Global Error Handling Middleware
 // ==========================================
 app.use((err, req, res, next) => {
   console.error('Unhandled Server Error:', err);
@@ -239,11 +73,47 @@ app.use((err, req, res, next) => {
 });
 
 // ==========================================
-// 6. Start Server
+// 5. Database Connection & Server Startup
 // ==========================================
-app.listen(PORT, () => {
-  console.log(`========================================`);
-  console.log(` Shopping Cart API running on port ${PORT}`);
-  console.log(` URL: http://localhost:${PORT}`);
-  console.log(`========================================`);
-});
+async function seedInitialProducts() {
+  try {
+    const count = await Product.countDocuments();
+    if (count === 0) {
+      console.log('Database empty. Seeding initial sample products...');
+      const seedData = [
+        { name: 'Wireless Keyboard', price: 49.99, quantity: 5 },
+        { name: 'Ergonomic Mouse', price: 29.99, quantity: 10 },
+        { name: 'Gaming Headset', price: 79.99, quantity: 3 },
+        { name: 'USB-C Hub', price: 24.50, quantity: 8 }
+      ];
+      await Product.insertMany(seedData);
+      console.log('Initial sample products seeded successfully.');
+    }
+  } catch (err) {
+    console.error('Error seeding initial products:', err.message);
+  }
+}
+
+async function startServer() {
+  try {
+    console.log(`Connecting to MongoDB at: ${MONGODB_URI.replace(/\/\/.*@/, '//***:***@')}`);
+    await mongoose.connect(MONGODB_URI);
+    console.log('Successfully connected to MongoDB.');
+
+    // Seed data if empty
+    await seedInitialProducts();
+
+    app.listen(PORT, () => {
+      console.log(`========================================`);
+      console.log(` Shopping Cart API running on port ${PORT}`);
+      console.log(` URL: http://localhost:${PORT}`);
+      console.log(` Database: MongoDB`);
+      console.log(`========================================`);
+    });
+  } catch (err) {
+    console.error('Fatal: Failed to connect to MongoDB:', err.message);
+    process.exit(1);
+  }
+}
+
+startServer();
