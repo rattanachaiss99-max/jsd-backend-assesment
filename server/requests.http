@@ -1,0 +1,70 @@
+### Base URL Variable
+@baseUrl = http://localhost:5000
+
+### 1. Health check
+GET {{baseUrl}}/
+
+### 2. Get all products (Default)
+GET {{baseUrl}}/products
+
+### 3. Get all products with search query parameter (Search by name: "headset")
+GET {{baseUrl}}/products?search=headset
+
+### 4. Get all products with sort query parameter (Sort by price ascending)
+GET {{baseUrl}}/products?sort=price_asc
+
+### 5. Get all products with sort query parameter (Sort by price descending)
+GET {{baseUrl}}/products?sort=price_desc
+
+### 6. Get single product by valid ID
+GET {{baseUrl}}/products/1
+
+### 7. Get single product by invalid ID (Expect 404)
+GET {{baseUrl}}/products/non-existing-id
+
+### 8. Add a new product (Valid data, expect 201)
+POST {{baseUrl}}/products
+Content-Type: application/json
+
+{
+  "name": "Mechanical Gaming Keyboard",
+  "price": 89.99,
+  "quantity": 4
+}
+
+### 9. Add a new product with invalid data (Missing price, expect 400)
+POST {{baseUrl}}/products
+Content-Type: application/json
+
+{
+  "name": "Incomplete Product"
+}
+
+### 10. Update an existing product (Valid data, expect 200)
+PUT {{baseUrl}}/products/1
+Content-Type: application/json
+
+{
+  "name": "Wireless Mechanical Keyboard Pro",
+  "price": 69.99,
+  "quantity": 12
+}
+
+### 11. Update a non-existing product (Expect 404)
+PUT {{baseUrl}}/products/99999
+Content-Type: application/json
+
+{
+  "name": "Ghost Product",
+  "price": 10.00,
+  "quantity": 1
+}
+
+### 12. Delete an existing product (Expect 200)
+DELETE {{baseUrl}}/products/2
+
+### 13. Delete non-existing product (Expect 404)
+DELETE {{baseUrl}}/products/99999
+
+### 14. Access undefined route (Expect 404)
+GET {{baseUrl}}/unknown-route
